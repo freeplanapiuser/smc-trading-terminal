@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pro SMC Multi-Asset Terminal (Crypto INR & NSE)</title>
+<style>
+  :root {
+    --bg: #0b0f19; --panel: #131a2a; --border: #222d44;
+    --text: #e2e8f0; --muted: #94a3b8; --green: #10b981;
+    --red: #ef4444; --amber: #f59e0b; --purple: #8b5cf6; --blue: #38bdf8;
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); padding: 16px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: 330px 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--blue); display:flex; justify-content:space-between; align-items:center; }
+  label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  input, select { width: 100%; margin-top: 4px; padding: 6px 8px; background: #0f1523; border: 1px solid var(--border); color: var(--text); border-radius: 6px; }
+  button { width: 100%; margin-top: 14px; padding: 10px; background: var(--green); color: #052e16; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-sm { width: auto; margin-top: 0; padding: 4px 10px; font-size: 11px; background: #1e293b; color: var(--blue); border: 1px solid var(--border); }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .kpi .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .kpi .val { font-size: 19px; font-weight: 700; margin-top: 4px; }
+  .badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pass { background: rgba(16,185,129,0.15); color: var(--green); }
+  .fail { background: rgba(239,68,68,0.15); color: var(--red); }
+  .check-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  svg { width: 100%; height: 390px; background: #090d16; border-radius: 8px; border: 1px solid var(--border); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+</style>
+</head>
+<body>
+  <h1>Institutional SMC Multi-Asset Terminal (Crypto INR &amp; NSE)</h1>
+  <div class="sub">Order Block + FVG + ChoCH + BSL Liquidity Engine with Fractional Crypto Sizing, Exchange Fees &amp; 1% Indian VDA TDS</div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>1. Asset &amp; Regime Inputs</h2>
+        <label>Select Market / Coin</label>
+        <select id="asset_select" onchange="onAssetChange()">
+          <option value="CRYPTO|BTC_INR" selected>CRYPTO: BTC / INR (Bitcoin)</option>
+          <option value="CRYPTO|ETH_INR">CRYPTO: ETH / INR (Ethereum)</option>
+          <option value="CRYPTO|SOL_INR">CRYPTO: SOL / INR (Solana)</option>
+          <option value="CRYPTO|POL_INR">CRYPTO: POL / INR (Polygon)</option>
+          <option value="EQUITY|NIFTY50">EQUITY: NIFTY 50 (NSE Index)</option>
+        </select>
+
+        <label>Candle Data Feed</label>
+        <select id="data_source">
+          <option value="sample" selected>Built-in SMC Sample Setup</option>
+          <option value="live">Live CoinDCX Public Candles (15m)</option>
+        </select>
+
+        <div id="time_wrap" style="display:none;">
+          <label>NSE Time (IST) <span>9:00 Pre-Open / 9:15 Open</span></label>
+          <input id="time" value="09:30" />
+        </div>
+
+        <label id="lbl_lead1">BTC 24h Change (%)</label>
+        <input id="lead1" type="number" step="0.1" value="1.45" />
+        <label id="lbl_lead2">ETH 24h Change (%)</label>
+        <input id="lead2" type="number" step="0.1" value="2.10" />
+        <label id="lbl_cue">USDT/INR Liquidity Premium (%)</label>
+        <input id="cue" type="number" step="0.1" value="0.45" />
+        <label id="lbl_vol">24h Crypto Volatility % (&lt;4.5% Stable)</label>
+        <input id="vol" type="number" step="0.2" value="3.2" />
+
+        <label id="lbl_breadth">Buy Volume vs Sell Volume</label>
+        <div style="display:flex; gap:8px;">
+          <input id="adv" type="number" value="1420" />
+          <input id="dec" type="number" value="680" />
+        </div>
+
+        <label>Account Capital (INR)</label>
+        <input id="cap" type="number" step="50000" value="500000" />
+        <label>Base Risk (%) / Min R:R</label>
+        <div style="display:flex; gap:8px;">
+          <input id="risk" type="number" step="0.25" value="1.0" />
+          <input id="rr" type="number" step="0.5" value="2.5" />
+        </div>
+        <label>Fee Per Side (%) / Sell TDS (%)</label>
+        <div style="display:flex; gap:8px;">
+          <input id="fee_pct" type="number" step="0.05" value="0.20" />
+          <input id="tds_pct" type="number" step="0.5" value="1.0" />
+        </div>
+
+        <button onclick="runSim()">Run Strategy &amp; Backtest</button>
+      </div>
+
+      <div class="card">
+        <h2>2. Pre-Trade Regime Gate</h2>
+        <div id="checklist"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">Net P&amp;L (Post Fee/TDS)</div><div class="val" id="kpi_pnl">-</div></div>
+        <div class="kpi"><div class="lbl">Fees + 1% TDS Drag</div><div class="val" id="kpi_fric" style="color:var(--amber)">-</div></div>
+        <div class="kpi"><div class="lbl">Win Rate / Executed</div><div class="val" id="kpi_wr">-</div></div>
+        <div class="kpi"><div class="lbl">Active Risk Cap</div><div class="val" id="kpi_risk">-</div></div>
+      </div>
+
+      <div class="card">
+        <h2>3. SMC Price Action Chart <span id="feed_tag" style="color:var(--muted); font-size:11px;"></span></h2>
+        <svg id="chart" viewBox="0 0 920 390"></svg>
+        <div class="legend">
+          <span><i class="dot" style="background:rgba(139,92,246,0.35)"></i>Confirmed Bullish Order Block</span>
+          <span><i class="dot" style="background:rgba(56,189,248,0.30)"></i>Fair Value Gap (FVG)</span>
+          <span><i class="dot" style="background:#f59e0b"></i>ChoCH / Swing High</span>
+          <span><i class="dot" style="background:#10b981"></i>BSL Target</span>
+          <span><i class="dot" style="background:#38bdf8"></i>EMA 20</span>
+          <span><i class="dot" style="background:#e879f9"></i>VWAP</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span>4. Multi-Asset Trading Journal</span>
+          <button class="btn-sm" onclick="downloadCSV()">Download CSV</button>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Pair</th><th>Time</th><th>Status</th><th>Entry</th><th>Stop Loss</th>
+              <th>BSL Target</th><th>Qty (Coins/Units)</th><th>R:R</th><th>Fees+TDS</th><th>Net P&amp;L</th><th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="journal_body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+let lastJournal = [];
+
+function onAssetChange() {
+  const [assetClass] = document.getElementById('asset_select').value.split('|');
+  const isCrypto = assetClass === 'CRYPTO';
+  document.getElementById('time_wrap').style.display = isCrypto ? 'none' : 'block';
+  document.getElementById('lbl_lead1').innerText = isCrypto ? 'BTC 24h Change (%)' : 'NASDAQ Change (%)';
+  document.getElementById('lbl_lead2').innerText = isCrypto ? 'ETH 24h Change (%)' : 'Dow Jones Change (%)';
+  document.getElementById('lbl_cue').innerText = isCrypto ? 'USDT/INR Liquidity Premium (%)' : 'GIFT Nifty Gap (%)';
+  document.getElementById('lbl_vol').innerText = isCrypto ? '24h Crypto Volatility % (<4.5% Stable)' : 'India VIX (<15 Stable)';
+  document.getElementById('lbl_breadth').innerText = isCrypto ? 'Buy Volume vs Sell Volume' : 'NSE Advances vs Declines';
+  document.getElementById('vol').value = isCrypto ? '3.2' : '13.4';
+  document.getElementById('fee_pct').value = isCrypto ? '0.20' : '0.03';
+  document.getElementById('tds_pct').value = isCrypto ? '1.0' : '0.0';
+  runSim();
+}
+
+async function runSim() {
+  const [asset_class, symbol] = document.getElementById('asset_select').value.split('|');
+  const payload = {
+    asset_class,
+    symbol,
+    data_source: document.getElementById('data_source').value,
+    time: document.getElementById('time').value,
+    lead1: parseFloat(document.getElementById('lead1').value),
+    lead2: parseFloat(document.getElementById('lead2').value),
+    cue: parseFloat(document.getElementById('cue').value),
+    vol: parseFloat(document.getElementById('vol').value),
+    adv: parseInt(document.getElementById('adv').value),
+    dec: parseInt(document.getElementById('dec').value),
+    cap: parseFloat(document.getElementById('cap').value),
+    risk: parseFloat(document.getElementById('risk').value),
+    rr: parseFloat(document.getElementById('rr').value),
+    fee_pct: parseFloat(document.getElementById('fee_pct').value),
+    tds_pct: parseFloat(document.getElementById('tds_pct').value),
+  };
+
+  const res = await fetch('/api/simulate', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  lastJournal = data.journal || [];
+  renderAll(data);
+}
+
+function renderAll(data) {
+  const m = data.metrics;
+  document.getElementById('feed_tag').innerText = data.data_source || '';
+  const pnlEl = document.getElementById('kpi_pnl');
+  pnlEl.innerText = (m.net_pnl_inr >= 0 ? '+' : '') + '₹' + m.net_pnl_inr.toLocaleString();
+  pnlEl.style.color = m.net_pnl_inr >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('kpi_fric').innerText = '₹' + m.total_fees_tds_inr.toLocaleString();
+  document.getElementById('kpi_wr').innerText = `${m.win_rate_pct}% (${m.executed_trades})`;
+  document.getElementById('kpi_risk').innerText = `${data.regime.effective_risk_pct}% (${data.regime.vol_regime.split(' ')[0]})`;
+
+  document.getElementById('checklist').innerHTML = data.regime.checks.map(c => `
+    <div class="check-row">
+      <div><strong>${c.rule}</strong><div style="color:var(--muted)">${c.detail}</div></div>
+      <span class="badge ${c.passed ? 'pass' : 'fail'}">${c.passed ? 'PASS' : 'WARN'}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('journal_body').innerHTML = data.journal.map(j => `
+    <tr>
+      <td><strong>${j.trade_id}</strong></td>
+      <td>${j.symbol.replace('_', '/')}</td>
+      <td>${j.timestamp}</td>
+      <td><span class="badge ${j.status === 'WIN' ? 'pass' : 'fail'}">${j.status}</span></td>
+      <td>${j.entry_price}</td>
+      <td>${j.stop_loss}</td>
+      <td>${j.target_price}</td>
+      <td>${j.quantity}</td>
+      <td>${j.rr_planned ? '1 : ' + j.rr_planned : '-'}</td>
+      <td style="color:var(--amber)">${j.fees_and_tds_inr ? '₹' + j.fees_and_tds_inr.toLocaleString() : '-'}</td>
+      <td style="color:${j.net_pnl_inr >= 0 ? 'var(--green)' : 'var(--red)'}">${j.net_pnl_inr ? '₹' + j.net_pnl_inr.toLocaleString() : '-'}</td>
+      <td style="color:var(--muted)">${j.notes}</td>
+    </tr>
+  `).join('');
+
+  drawChart(data);
+}
+
+function drawChart(data) {
+  const svg = document.getElementById('chart');
+  const candles = data.candles;
+  const W = 920, H = 390, padL = 68, padR = 25, padT = 20, padB = 30;
+  const rawMax = Math.max(...candles.map(c => c.high));
+  const rawMin = Math.min(...candles.map(c => c.low));
+  const span = Math.max(rawMax - rawMin, rawMax * 0.002);
+  const maxP = rawMax + span * 0.12;
+  const minP = rawMin - span * 0.15;
+  const dec = rawMax < 500 ? 4 : (rawMax > 100000 ? 0 : 2);
+
+  const xScale = i => padL + (i / Math.max(candles.length - 1, 1)) * (W - padL - padR);
+  const yScale = p => padT + ((maxP - p) / (maxP - minP)) * (H - padT - padB);
+
+  let html = '';
+  for (let g = 0; g <= 5; g++) {
+    const p = minP + (g / 5) * (maxP - minP);
+    const y = yScale(p);
+    html += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#1e293b" stroke-dasharray="3,3"/>`;
+    html += `<text x="6" y="${y + 4}" fill="#64748b" font-size="10">${p.toFixed(dec)}</text>`;
+  }
+
+  const confirmed = data.setups.find(s => s.confirmed);
+  if (confirmed) {
+    const xStart = xScale(confirmed.ob_index), xEnd = W - padR;
+    const obY1 = yScale(confirmed.ob_high), obY2 = yScale(confirmed.ob_low);
+    html += `<rect x="${xStart}" y="${obY1}" width="${xEnd - xStart}" height="${Math.max(obY2 - obY1, 4)}" fill="rgba(139,92,246,0.28)" stroke="#8b5cf6"/>`;
+    html += `<text x="${xStart + 6}" y="${obY2 - 4}" fill="#c4b5fd" font-size="10" font-weight="bold">Bullish Order Block</text>`;
+
+    const fvgY1 = yScale(confirmed.fvg_high), fvgY2 = yScale(confirmed.fvg_low);
+    html += `<rect x="${xStart}" y="${fvgY1}" width="${xEnd - xStart}" height="${Math.max(fvgY2 - fvgY1, 4)}" fill="rgba(56,189,248,0.22)" stroke="#38bdf8" stroke-dasharray="4,2"/>`;
+    html += `<text x="${xStart + 6}" y="${fvgY1 + 11}" fill="#7dd3fc" font-size="10" font-weight="bold">Fair Value Gap (FVG)</text>`;
+
+    const chochY = yScale(confirmed.choch_level);
+    html += `<line x1="${Math.max(padL, xStart - 60)}" y1="${chochY}" x2="${xEnd}" y2="${chochY}" stroke="#f59e0b" stroke-dasharray="5,3"/>`;
+    html += `<text x="${Math.max(padL, xStart - 55)}" y="${chochY - 4}" fill="#fbbf24" font-size="10">ChoCH (${confirmed.choch_level})</text>`;
+
+    const bslY = yScale(confirmed.bsl_target);
+    html += `<line x1="${padL}" y1="${bslY}" x2="${xEnd}" y2="${bslY}" stroke="#10b981" stroke-width="1.5"/>`;
+    html += `<text x="${W - 195}" y="${bslY - 5}" fill="#34d399" font-size="11" font-weight="bold">BSL Target (${confirmed.bsl_target})</text>`;
+  }
+
+  const emaPts = data.indicators.ema20.map((v, i) => `${xScale(i)},${yScale(v)}`).join(' ');
+  const vwapPts = data.indicators.vwap.map((v, i) => `${xScale(i)},${yScale(v)}`).join(' ');
+  html += `<polyline fill="none" stroke="#38bdf8" stroke-width="1.5" points="${emaPts}"/>`;
+  html += `<polyline fill="none" stroke="#e879f9" stroke-width="1.5" stroke-dasharray="3,2" points="${vwapPts}"/>`;
+
+  const cw = Math.max(6, Math.min(14, (W - padL - padR) / candles.length * 0.65));
+  candles.forEach((c, i) => {
+    const x = xScale(i);
+    const color = c.close >= c.open ? '#10b981' : '#ef4444';
+    const yHigh = yScale(c.high), yLow = yScale(c.low);
+    const yTop = yScale(Math.max(c.open, c.close)), yBot = yScale(Math.min(c.open, c.close));
+    html += `<line x1="${x}" y1="${yHigh}" x2="${x}" y2="${yLow}" stroke="${color}" stroke-width="1.5"/>`;
+    html += `<rect x="${x - cw/2}" y="${yTop}" width="${cw}" height="${Math.max(yBot - yTop, 2)}" fill="${color}"/>`;
+  });
+
+  data.markers.forEach(mk => {
+    const x = xScale(mk.index), y = yScale(mk.price);
+    const isEntry = mk.type === 'ENTRY_LONG';
+    html += `<circle cx="${x}" cy="${y}" r="6" fill="${isEntry ? '#38bdf8' : '#10b981'}" stroke="#fff" stroke-width="2"/>`;
+    html += `<text x="${x - 24}" y="${y + (isEntry ? 18 : -10)}" fill="#fff" font-size="10" font-weight="bold">${mk.type}</text>`;
+  });
+
+  svg.innerHTML = html;
+}
+
+function downloadCSV() {
+  if (!lastJournal.length) return;
+  const headers = Object.keys(lastJournal[0]);
+  const rows = [headers.join(','), ...lastJournal.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'smc_multi_asset_journal.csv';
+  a.click();
+}
+
+runSim();
+</script>
+</body>
+</html>
